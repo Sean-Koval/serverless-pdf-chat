@@ -22,18 +22,18 @@ const DocumentList: React.FC = () => {
   }, []);
 
   return (
-    <div>
+    <div className="dark:bg-gray-800">
       <div className="flex justify-between pt-6 pb-4">
-        <h2 className="text-2xl font-bold">My documents</h2>
+        <h2 className="text-2xl font-bold dark:text-white">My documents</h2>
         <button
           onClick={fetchData}
           type="button"
-          className="text-gray-700 border border-gray-700 hover:bg-gray-700 hover:text-white focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm p-2 text-center inline-flex items-center"
+          className="text-gray-700 border border-gray-700 hover:bg-gray-700 hover:text-white focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm p-2 text-center inline-flex items-center dark:text-gray-300 dark:border-gray-500 dark:hover:bg-gray-600 dark:focus:ring-blue-500"
         >
           <ArrowPathRoundedSquareIcon
             className={`w-5 h-5 ${
               listStatus === "loading" ? "animate-spin" : ""
-            }`}
+            }dark:text-gray-300`}
           />
         </button>
       </div>
@@ -44,7 +44,7 @@ const DocumentList: React.FC = () => {
             <Link
               to={`/doc/${document.documentid}/${document.conversations[0].conversationid}/`}
               key={document.documentid}
-              className="block p-6 bg-white border border-gray-200 rounded hover:bg-gray-100"
+              className="block p-6 bg-white border border-gray-200 rounded hover:bg-gray-100 dark:bg-gray-700 dark:border-gray-600 dark:hover:bg-gray-600"
             >
               <DocumentDetail {...document} />
             </Link>
@@ -52,8 +52,8 @@ const DocumentList: React.FC = () => {
       </div>
       {listStatus === "idle" && documents.length === 0 && (
         <div className="flex flex-col items-center mt-4">
-          <p className="font-bold text-lg">There's nothing here yet...</p>
-          <p className="mt-1">Upload your first document to get started!</p>
+          <p className="font-bold text-lg dark:text-white">There's nothing here yet...</p>
+          <p className="mt-1 dark:text-gray-300">Upload your first document to get started!</p>
         </div>
       )}
       {listStatus === "loading" && documents.length === 0 && (
