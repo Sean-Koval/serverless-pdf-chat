@@ -22,9 +22,9 @@ const Navigation: React.FC<NavigationProps> = ({
       <div className="container flex flex-wrap items-center justify-between py-3">
         <Link
           to="/"
-          className="inline-flex items-center self-center text-2xl font-semibold whitespace-nowrap text-white"
+          className="inline-flex items-center self-center text-2xl font-semibold whitespace-nowrap text-customBlue"
         >
-          <ChatBubbleLeftRightIcon className="w-6 h-6 mr-1.5" />
+          <ChatBubbleLeftRightIcon className="w-6 h-6 mr-1.5 text-customBlue" />
           Symphony DocChat
         </Link>
         <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
@@ -32,7 +32,7 @@ const Navigation: React.FC<NavigationProps> = ({
             <Menu>
               <Menu.Button className="text-center inline-flex items-center text-white text-sm underline-offset-2 hover:underline">
                 {userInfo?.attributes?.email}
-                <ChevronDownIcon className="w-3 h-3 ml-1 text-white" />
+                <ChevronDownIcon className="w-3 h-3 ml-1 text-customBlue" />
               </Menu.Button>
               <Menu.Items className="absolute right-0 z-10 mt-2 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
                 <div className="px-1 py-1 ">

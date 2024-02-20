@@ -5,6 +5,7 @@ export default {
     extend: {
       colors: {
         customNavy: 'rgb(0, 0, 40)',
+        customBlue: 'rgb(0, 152, 255)', // Adding custom text/icon color
       },
     },
     container: {
