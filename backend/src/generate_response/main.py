@@ -7,6 +7,8 @@ from langchain.memory import ConversationBufferMemory
 from langchain.embeddings import BedrockEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.chains import ConversationalRetrievalChain
+from langchain.chains.summarize import load_summarize_chain
+
 
 
 MEMORY_TABLE = os.environ["MEMORY_TABLE"]
@@ -35,7 +37,7 @@ def lambda_handler(event, context):
     )
 
     embeddings, llm = BedrockEmbeddings(
-        model_id="amazon.titan-embed-text-v1",
+        model_id="cohere.embed-english-v3",# "amazon.titan-embed-text-v1",
         client=bedrock_runtime,
         region_name="us-east-1",
     ), Bedrock(
