@@ -1,4 +1,4 @@
-import { CloudIcon } from "@heroicons/react/24/outline";
+//import { CloudIcon } from "@heroicons/react/24/outline";
 //import GitHub from "../../public/github.svg";
 import Symphony from "../../public/symphony.svg";
 
