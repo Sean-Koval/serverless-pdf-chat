@@ -5,6 +5,7 @@ import {
   ChevronDownIcon,
 } from "@heroicons/react/24/outline";
 import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/solid";
+import Symphony from "../../public/symphony.svg";
 
 interface NavigationProps {
   userInfo: any;
@@ -20,6 +21,12 @@ const Navigation: React.FC<NavigationProps> = ({
   return (
     <nav className="bg-customNavy">
       <div className="container flex flex-wrap items-center justify-between py-3">
+        <img
+          src={Symphony}
+          alt="React Logo"
+          width={20}
+          className="mr-1.5 py-2 mx-2"
+        />
         <Link
           to="/"
           className="inline-flex items-center self-center text-2xl font-semibold whitespace-nowrap text-customBlue"
