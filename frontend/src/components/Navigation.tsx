@@ -4,8 +4,8 @@ import {
   ArrowLeftOnRectangleIcon,
   ChevronDownIcon,
 } from "@heroicons/react/24/outline";
-//import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/solid";
-import Symphony from "../../public/symphony.svg";
+import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/solid";
+//import Symphony from "../../public/symphony.svg";
 
 interface NavigationProps {
   userInfo: any;
@@ -25,8 +25,8 @@ const Navigation: React.FC<NavigationProps> = ({
           to="/"
           className="inline-flex items-center self-center text-2xl font-semibold whitespace-nowrap text-customBlue"
         >
-          <img src={Symphony} alt="React Logo" width={20} className="mr-1.5 py-2 mx-2" />
-          <span>DocChat</span>
+          <ChatBubbleLeftRightIcon className="w-6 h-6 mr-1.5 text-customBlue" />
+          Symphony DocChat
         </Link>
         <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
           <div className="relative ml-3">
@@ -58,7 +58,6 @@ const Navigation: React.FC<NavigationProps> = ({
 
 export default Navigation;
 
-//          <ChatBubbleLeftRightIcon className="w-6 h-6 mr-1.5 text-customBlue" />
 
 // import { Link } from "react-router-dom";
 // import { Menu } from "@headlessui/react";
