@@ -21,18 +21,12 @@ const Navigation: React.FC<NavigationProps> = ({
   return (
     <nav className="bg-customNavy">
       <div className="container flex flex-wrap items-center justify-between py-3">
-        <img
-          src={Symphony}
-          alt="React Logo"
-          width={20}
-          className="mr-1.5 py-2 mx-2"
-        />
         <Link
           to="/"
           className="inline-flex items-center self-center text-2xl font-semibold whitespace-nowrap text-customBlue"
         >
-          <ChatBubbleLeftRightIcon className="w-6 h-6 mr-1.5 text-customBlue" />
-          Symphony DocChat
+          <img src={Symphony} alt="React Logo" width={20} className="mr-1.5 py-2 mx-2" />
+          <span>DocChat</span>
         </Link>
         <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
           <div className="relative ml-3">
@@ -64,6 +58,7 @@ const Navigation: React.FC<NavigationProps> = ({
 
 export default Navigation;
 
+//          <ChatBubbleLeftRightIcon className="w-6 h-6 mr-1.5 text-customBlue" />
 
 // import { Link } from "react-router-dom";
 // import { Menu } from "@headlessui/react";
