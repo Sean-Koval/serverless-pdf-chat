@@ -5,7 +5,7 @@ import {
   ChevronDownIcon,
 } from "@heroicons/react/24/outline";
 import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/solid";
-import Symphony from "../../public/symphony.svg";
+//import Symphony from "../../public/symphony.svg";
 
 interface NavigationProps {
   userInfo: any;
