@@ -24,8 +24,8 @@ const Navigation: React.FC<NavigationProps> = ({
         <Link
           to="/"
           className="inline-flex items-center self-center text-2xl font-semibold whitespace-nowrap text-customBlue"
-        >            
-        <img src={Symphony} alt="React Logo" width={20} className="mr-1.5 py-2 mx-2" />
+        >
+          <ChatBubbleLeftRightIcon className="w-6 h-6 mr-1.5 text-customBlue" />           
           Symphony DocChat
         </Link>
         <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
