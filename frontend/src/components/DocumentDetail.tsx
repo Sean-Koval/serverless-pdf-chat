@@ -120,4 +120,4 @@ export default DocumentDetail;
 //   );
 // };
 
-export default DocumentDetail;
+//export default DocumentDetail;
