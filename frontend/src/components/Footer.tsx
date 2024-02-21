@@ -1,5 +1,6 @@
 import { CloudIcon } from "@heroicons/react/24/outline";
-import GitHub from "../../public/github.svg";
+//import GitHub from "../../public/github.svg";
+import Symphony from "../../public/symphony.svg;"
 
 const Footer: React.FC = () => {
   return (
@@ -12,7 +13,7 @@ const Footer: React.FC = () => {
           </div>
           <div className="inline-flex items-center hover:underline underline-offset-2">
             <img
-              src={GitHub}
+              src={Symphony}
               alt="React Logo"
               width={20}
               className="mr-1.5 py-2 mx-2"
