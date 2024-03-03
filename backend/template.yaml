@@ -302,7 +302,10 @@ Resources:
             - Sid: "BedrockScopedAccess"
               Effect: "Allow"
               Action: "bedrock:InvokeModel"
-              Resource: "arn:aws:bedrock:*::foundation-model/cohere.embed-english-v3"
+              Resource: 
+              - "arn:aws:bedrock:*::foundation-model/cohere.embed-english-v3"
+              - "arn:aws:bedrock:*::foundation-model/anthropic.claude-v2"
+
       Environment:
         Variables:
           DOCUMENT_TABLE: !Ref DocumentTable
@@ -318,7 +321,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: src/generate_response/
-      Timeout: 30
+      Timeout: 120
       MemorySize: 2048
       Policies:
         - DynamoDBCrudPolicy:

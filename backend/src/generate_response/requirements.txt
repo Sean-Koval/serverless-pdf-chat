@@ -3,4 +3,7 @@ botocore==1.31.57
 faiss-cpu==1.7.4
 BeautifulSoup4==4.12.2
 langchain==0.1.8
+langchain_community==0.0.23
+anthropic
 urllib3
+pypdf

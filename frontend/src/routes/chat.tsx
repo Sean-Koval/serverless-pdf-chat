@@ -20,13 +20,19 @@ const Document: React.FC = () => {
 
   const fetchData = async (conversationid = params.conversationid) => {
     setLoading("loading");
-    const conversation = await API.get(
-      "serverless-pdf-chat",
-      `/doc/${params.documentid}/${conversationid}`,
-      {}
-    );
-    setConversation(conversation);
-    setLoading("idle");
+    try {
+      const conversation = await API.get(
+        "serverless-pdf-chat",
+        `/doc/${params.documentid}/${conversationid}`,
+        {}
+      );
+      console.log('Fetched conversation data:', conversation);
+      setConversation(conversation);
+    } catch (error) {
+      console.error("Error fetching conversation data:", error)
+    } finally {
+      setLoading("idle");
+    }
   };
 
   useEffect(() => {
