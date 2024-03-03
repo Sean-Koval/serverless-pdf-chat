@@ -84,8 +84,10 @@ const Document: React.FC = () => {
         ...conversation,
         messages: [...conversation.messages, previewMessage],
       };
-
+      console.log('Before state update:', conversation);
       setConversation(updatedConversation);
+      console.log('After state update:', conversation);
+
     }
 
     await API.post(
