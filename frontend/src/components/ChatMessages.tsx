@@ -72,7 +72,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({
             >
               <div className="prose">
                 {/* Render bullet point responses and lists properly */}
-                renderMessageContent{message.data.content||"placeholder summary...repsonse failed"}
+                {renderMessageContent(message.data.content||"placeholder summary...repsonse failed")}
               </div>
             </div>
           ))}
