@@ -1,6 +1,38 @@
 import { PaperAirplaneIcon } from "@heroicons/react/24/outline";
 import Loading from "../../public/loading-dots.svg";
 import { Conversation } from "../common/types";
+import React from 'react';
+
+
+const renderMessageContent = (content: string) => {
+  // Split content into paragraphs/lists based on double newline characters
+  const blocks = content.split('\n\n');
+
+  return blocks.map((block, index) => {
+    // Further split by newline for potential list items within each block
+    const lines = block.split('\n').filter(line => line.trim());
+
+    // Check if block is a list by detecting leading '-' in any of its lines
+    const isList = lines.some(line => line.trim().startsWith('-'));
+
+    if (isList) {
+      // Render as list
+      return (
+        <ul key={index}>
+          {lines.map((item, itemIndex) => (
+            <li key={itemIndex}>{item.replace('-', '').trim()}</li>
+          ))}
+        </ul>
+      );
+    } else {
+      // Render as paragraph
+      return lines.map((line, lineIndex) => (
+        <p key={`${index}-${lineIndex}`}>{line}</p>
+      ));
+    }
+  });
+};
+
 
 interface ChatMessagesProps {
   conversation: Conversation;
@@ -19,6 +51,11 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({
   handlePromptChange,
   handleKeyPress,
 }) => {
+
+  console.log('Rendering summary:', conversation);
+  console.log('Rendering messageStatus:', messageStatus);
+
+
   return (
     <div className="flex flex-col justify-between h-full overflow-y-auto col-span-8 p-5 border-l border-gray-200">
       <div className="pb-5">
@@ -34,7 +71,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({
               key={i}
             >
               <div className="prose">
-                <p>{message.data.content}</p>
+                <p>renderMessageContent{message.data.content||"placeholder summary...repsonse failed"}</p>
               </div>
             </div>
           ))}
