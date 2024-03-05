@@ -174,7 +174,7 @@ def lambda_handler(event, context):
     # store data in pdfReader 
     pdfreader = PdfReader(f"/tmp/{file_name_full}") 
     number_of_pages = len(pdfreader.pages)
-    if number_of_pages < 5:
+    if number_of_pages > 2 and number_of_pages < 8:
         llm = Bedrock(
             model_id="anthropic.claude-v2", client=bedrock_runtime, region_name="us-east-1"
         )

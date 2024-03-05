@@ -3,8 +3,11 @@ import json
 import boto3
 import re
 import time
-from typing import Optional, Union
+from typing import Optional, Union, List, Dict, Any
 from langchain.tools import BaseTool
+from botocore.exceptions import ClientError
+from langchain.chains import ConversationChain
+from langchain.docstore.document import Document
 
 from aws_lambda_powertools import Logger
 from langchain.llms.bedrock import Bedrock
@@ -15,7 +18,7 @@ from langchain.vectorstores import FAISS
 from langchain.chains import ConversationalRetrievalChain
 from langchain.chains.summarize import load_summarize_chain
 from langchain.text_splitter import CharacterTextSplitter  # If text splitting is required
-
+from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate  # For custom prompt templates
 #from langchain.document_loaders import PyPDFLoader
 from langchain_community.document_loaders import PyPDFLoader
@@ -28,99 +31,31 @@ s3 = boto3.client("s3")
 logger = Logger()
 
 
-# class SymDocumentChatBot:
+# class ExtendedConversationBufferMemory(ConversationBufferMemory):
+#     extra_variables:List[str] = []
 
-#     def __init__(self, embeddings=None, llm=None, index=None, memory=None, name=None, file_name=None):
-#         self.embeddings = embeddings
-#         self.llm = llm
-#         self.index = index
-#         self.memory = memory
-#         self.memory = None
-#         self.name = name
-#         self.file_name = file_name
+#     @property
+#     def memory_variables(self) -> List[str]:
+#         """Will always return list of memory variables."""
+#         return [self.memory_key] + self.extra_variables
+
+#     def load_memory_variables(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+#         """Return buffer with history and extra variables"""
+#         d = super().load_memory_variables(inputs)
+#         d.update({k:inputs.get(k) for k in self.extra_variables})        
+#         return d
     
-#     def summarization(self):
-#         """
-#         Use the language model to summarize a document.
-#         This is a simplified placeholder.   
-#         """
-#         # Assume llm has a method `answer` which you can use for answering questions
-#         if self.llm:
-#             s3.download_file(BUCKET, f"{self.user}/{self.file_name}", f"/tmp/{self.file_name}")
-#             loader = PyPDFLoader(f"/tmp/{self.file_name}")
-#             pages = loader.load_and_split()
-#             # map + reduce prompts for map reduce chain
-#             map_prompt_template = """
-#                             Write a summary of this chunk of text that includes the main points and any important details.
-#                             {text}
-#                             """
-#             map_prompt = PromptTemplate(template=map_prompt_template, input_variables=["text"])
-
-#             combine_prompt_template = """
-#                             Write a concise summary of the following text delimited by triple backquotes.
-#                             Return your response in bullet points which covers the key points of the text.
-#                             ```{text}```
-#                             BULLET POINT SUMMARY:
-#                             """
-
-#             combine_prompt = PromptTemplate(
-#                 template=combine_prompt_template, input_variables=["text"]
-#             )
-
-#             map_reduce_chain = load_summarize_chain(
-#                 llm=self.llm,
-#                 chain_type="map_reduce",
-#                 map_prompt=map_prompt,
-#                 combine_prompt=combine_prompt,
-#                 return_intermediate_steps=True,
-#             )
-#             map_reduce_output = map_reduce_chain({"input_documents": pages})
-#             print(map_reduce_output)
-#             return map_reduce_output["intermediate_steps"][-1]
-#         else:
-#             return "LLM not initialized."
-    
-#     def question_answering(self, human_input):
-#         """
-#         Answer a question a given text using the language model.
-#         This is a simplified placeholder.
-#         """
-#         # Assume llm has a method `summarize` which you can use for summarizing texts
-#         if self.llm:
-#             qa = ConversationalRetrievalChain.from_llm(
-#                 llm=self.llm,
-#                 retriever=self.index.as_retriever(),
-#                 memory=self.memory,
-#                 return_source_documents=True,
-#             )
-
-#             return qa({"question": human_input})
-#         else:
-#             return "LLM not initialized."
-    
-#     def determine_question_answering_vs_summarization(self, input_text):
-#         """
-#         Determines whether to answer a question or summarize based on the input text.
-#         Uses regex to look for variations of the word 'summarize'.
-#         """
-#         # Regex pattern to match 'summarize', 'summarization', 'summary', etc.
-#         summarize_pattern = re.compile(r'\bsummar(y|ize|ization)\b', re.IGNORECASE)
-
-#         # Search for the pattern in the input text
-#         if summarize_pattern.search(input_text):
-#             return "summarization"
-#         else:
-#             return "question_answering"
-
 class SymDocumentChatBot:
 
-    def __init__(self, embeddings=None, llm=None, index=None, memory=None, user=None, file_name=None):
+    def __init__(self, embeddings=None, llm=None, index=None, message_history=None, memory=None, user=None, file_name=None, conversation_id=None):
         self.embeddings = embeddings
         self.llm = llm
         self.index = index
+        self.message_history = message_history
         self.memory = memory
         self.user = user
         self.file_name = file_name
+        self.conversation_id = conversation_id
     
     def summarization(self):
 
@@ -158,6 +93,49 @@ class SymDocumentChatBot:
             return final_summary
         except Exception as e:
             return f"Error during summarization: {str(e)}"
+    # TEMP SOLUTION
+    def summarize_stuff(self, input):
+        """
+        Summarizes doucument by loading the entire document into a single prompt to take advantage of broad summary questions.
+        """
+
+        try:
+            document_path = f"/tmp/{self.file_name}"
+            s3_start = time.time()  # Start timing S3 download
+            print(f"{self.user}/{self.file_name}/{self.file_name}")
+            s3.download_file(BUCKET, f"{self.user}/{self.file_name}/{self.file_name}", document_path)
+            s3_end = time.time()  # End timing S3 download
+            logger.info(f"S3 Download Time: {s3_end - s3_start} seconds")
+
+            pages = self._load_and_split_pdf(document_path)
+            large_doc_str = self.format_docs(pages)
+
+            prompt_template = """Here is the task: {input}
+                                
+                                Here is the document:
+                                {context}
+                                """
+            prompt = PromptTemplate(
+            template=prompt_template, input_variables=["input", "context"]
+            )
+
+            # load the entire doc into a prompt and ask summary question
+            llm_chain = LLMChain(
+                llm=self.llm,
+                prompt=prompt
+            )
+            summary_content = llm_chain.predict(input=input, context=large_doc_str)
+            #self.memory.chat_memory.add_user_message(input)
+            #self.memory.chat_memory.add_ai_message(summary_content)
+
+            return summary_content
+
+        except Exception as e:
+            logger.error(f"There was an error with 'stuff' summarization: {e}")
+    
+    def format_docs(self, docs: List[Document]) -> str:
+        """Format the docs."""
+        return ", ".join([doc.page_content for doc in docs])
     
     def question_answering(self, question):
         """
@@ -190,7 +168,7 @@ class SymDocumentChatBot:
         else:
             return "question_answering"
         
-    def get_generated_summary(self):
+    def get_generated_summary(self, question):
         """
         Fetches the generated summary from an S3 bucket and returns it as a string.
 
@@ -208,61 +186,121 @@ class SymDocumentChatBot:
         # Temporary path to save the downloaded summary file
         temp_summary_path = "/tmp/summary.txt"
 
-        try:
-            # Download the summary file from S3 to a temporary location
-            #s3.download_file(bucket_name, summary_file_key, temp_summary_path)
-            s3.download_file(BUCKET, summary_file_key, temp_summary_path)
-            with open(temp_summary_path, 'r', encoding='utf-8') as file:
-                content = file.read()
-                # Replace newline and carriage return characters for JSON compatibility
-                summary_content = content.replace('\n', ' ').replace('\r', ' ')
+        # Check if the summary file exists in the S3 bucket
+        response = s3.list_objects_v2(Bucket=BUCKET, Prefix=summary_file_key)
 
+        if 'Contents' in response:
+            # File exists, download it
+            try:
+                self.s3.download_file(BUCKET, summary_file_key, temp_summary_path)
+                with open(temp_summary_path, 'r', encoding='utf-8') as file:
+                    summary_content = file.read()
+            except ClientError as e:
+                print(f"Error downloading file: {e}")
+                return "Error handling summary file."
+        else:
+            # File does not exist, generate summary
+            #summary_content = self.summarization()
+            #print(summary_content)
+            summary_content = self.summarize_stuff(question)
 
-            # Read the content of the summary file into a string
-            # with open(temp_summary_path, 'r') as file:
-            #     summary_content = file.read()
+        
+        # Update chat memory regardless of whether summary was downloaded or generated
+        self.memory.chat_memory.add_user_message(question)
+        self.memory.chat_memory.add_ai_message(summary_content)
 
-            return summary_content
-        except Exception as e:
-            logger.error(f"Failed to fetch summary from S3: {str(e)}")
-            return f"Error fetching summary: {str(e)}"
+        return summary_content
+
+        # try:
+        #     # Download the summary file from S3 to a temporary location
+        #     s3.download_file(BUCKET, summary_file_key, temp_summary_path)
+        #     with open(temp_summary_path, 'r', encoding='utf-8') as file:
+        #         summary_content = file.read()
+        #         #Replace newline and carriage return characters for JSON compatibility
+        #         #summary_content = content.replace('\n', ' ').replace('\r', ' ')
+        #         summary_content = self.summarization()
+
+        #     self.memory.chat_memory.add_user_message(question)
+        #     self.memory.chat_memory.add_ai_message(summary_content)
+
+        #     return summary_content
+
+        # except s3.exceptions.NoSuchKey:
+        #     logger.info(f"Failed to fetch summary from S3: {str(e)}")
+        #     summary_content = self.summarization()
+        #     self.memory.chat_memory.add_user_message(question)
+        #     self.memory.chat_memory.add_ai_message(summary_content)
+
+        #     return summary_content
+            
+
 
     def _load_and_split_pdf(self, pdf_path):
         loader = PyPDFLoader(pdf_path)
         return loader.load_and_split()
 
     def _perform_map_reduce_summarization(self, pages):
-        map_prompt_template = """
-                        Write a summary of this chunk of text that includes the main points and any important details.
-                        {text}
-                        """
-        map_prompt = PromptTemplate(template=map_prompt_template, input_variables=["text"])
+        # map_prompt_template = """
+        #                 Write a summary of this chunk of text that includes the main points and any important details.
+        #                 {text}
+        #                 """
+        # map_prompt = PromptTemplate(template=map_prompt_template, input_variables=["text"])
 
+        # # combine_prompt_template = """
+        # #                 Write a concise summary of the following text delimited by triple backquotes.
+        # #                 Return your response in bullet points which covers the key points of the text.
+        # #                 ```{text}```
+        # #                 BULLET POINT SUMMARY:
+        # #                """
+        
         # combine_prompt_template = """
         #                 Write a concise summary of the following text delimited by triple backquotes.
-        #                 Return your response in bullet points which covers the key points of the text.
+        #                 Return your response in paragraph format which covers the key points of the text.
         #                 ```{text}```
-        #                 BULLET POINT SUMMARY:
-        #                """
-        
-        combine_prompt_template = """
-                        Write a concise summary of the following text delimited by triple backquotes.
-                        Return your response in paragraph format which covers the key points of the text.
-                        ```{text}```
-                        SUMMARY:
-                        """
+        #                 SUMMARY:
+        #                 """
 
-        combine_prompt = PromptTemplate(
-            template=combine_prompt_template, input_variables=["text"]
+        # combine_prompt = PromptTemplate(
+        #     template=combine_prompt_template, input_variables=["text"]
+        # )
+
+        question_prompt_template = """
+                  Please provide a summary of the following text.
+                  TEXT: {text}
+                  SUMMARY:
+                  """
+        # REFINE PROMPT SECTION
+        question_prompt = PromptTemplate(
+            template=question_prompt_template, input_variables=["text"]
         )
+
+        refine_prompt_template = """
+                    Write a concise summary of the following text delimited by triple backquotes.
+                    Return your response in bullet points which covers the key points of the text.
+                    ```{text}```
+                    BULLET POINT SUMMARY:
+                    """
+
+        refine_prompt = PromptTemplate(
+            template=refine_prompt_template, input_variables=["text"]
+        )
+
+        # map_reduce_chain = load_summarize_chain(
+        #     llm=self.llm,
+        #     chain_type="map_reduce",
+        #     map_prompt=map_prompt,
+        #     combine_prompt=combine_prompt,
+        #     return_intermediate_steps=True,
+        # )
 
         map_reduce_chain = load_summarize_chain(
             llm=self.llm,
-            chain_type="map_reduce",
-            map_prompt=map_prompt,
-            combine_prompt=combine_prompt,
+            chain_type="refine",
+            question_prompt=question_prompt,
+            refine_prompt=refine_prompt,
             return_intermediate_steps=True,
         )
+
 
         return map_reduce_chain({"input_documents": pages})
 
@@ -309,13 +347,9 @@ def lambda_handler(event, context):
         output_key="answer",
         return_messages=True,
     )
+    print("memory")
+    logger.info(memory)
 
-    # qa = ConversationalRetrievalChain.from_llm(
-    #     llm=llm,
-    #     retriever=faiss_index.as_retriever(),
-    #     memory=memory,
-    #     return_source_documents=True,
-    # )
     chat_bot_creation_start = time.time()
 
     # Create an instance of DocumentChatBot with necessary components
@@ -325,6 +359,7 @@ def lambda_handler(event, context):
                                   memory=memory,
                                   user=user,
                                   file_name=file_name,
+                                  conversation_id=conversation_id,
     )
     chat_bot_creation_end = time.time()
     logger.info(f"ChatBot Creation Time: {chat_bot_creation_end - chat_bot_creation_start} seconds")
@@ -338,16 +373,14 @@ def lambda_handler(event, context):
     # Act based on determined action
     if action == "question_answering":
         response = chat_bot.question_answering(human_input)
+        print("question answering response")
+
     elif action == "summarization":
         # You would need to adjust how you get the text to summarize
-        #response = chat_bot.summarization()
-        response = " Here is a summary of the main points from the text:\n\n- The story is about Louise Mallard, whose husband was reported to have died in an accident. Upon hearing the news, she initially feels grief but then experiences a sense of freedom and joy at the prospect of being able to live her life just for herself now. \n\n- She imagines her future days filled with freedom and possibility. She prays that her life will be long so she can experience this new independent life. \n\n- When her sister comes to check on her, Louise has a feverish, triumphant look and seems like a goddess of victory, thrilled at her newfound freedom. \n\n- However, her husband Brently Mallard was not actually dead - he comes home alive. Louise is shocked and dies from a heart attack, which the doctors say was caused by the \"joy that kills.\""
-        response2 = chat_bot.get_generated_summary()
+        response = chat_bot.get_generated_summary(human_input)
+
         print(response)
-        print(type(response))
-        print("BELOW IS RESP FROM DOCUMENT")
-        print(response2)
-        print(type(response2))
+
     else:
         response = "Unable to determine action."
 
@@ -366,64 +399,3 @@ def lambda_handler(event, context):
         },
         "body": json.dumps({"answer": response}),
     }
-
-
-# @logger.inject_lambda_context(log_event=True)
-# def lambda_handler(event, context):
-#     event_body = json.loads(event["body"])
-#     file_name = event_body["fileName"]
-#     human_input = event_body["prompt"]
-#     conversation_id = event["pathParameters"]["conversationid"]
-
-#     user = event["requestContext"]["authorizer"]["claims"]["sub"]
-
-#     s3.download_file(BUCKET, f"{user}/{file_name}/index.faiss", "/tmp/index.faiss")
-#     s3.download_file(BUCKET, f"{user}/{file_name}/index.pkl", "/tmp/index.pkl")
-
-#     bedrock_runtime = boto3.client(
-#         service_name="bedrock-runtime",
-#         region_name="us-east-1",
-#     )
-
-#     embeddings, llm = BedrockEmbeddings(
-#         model_id="cohere.embed-english-v3",# "amazon.titan-embed-text-v1",
-#         client=bedrock_runtime,
-#         region_name="us-east-1",
-#     ), Bedrock(
-#         model_id="anthropic.claude-v2", client=bedrock_runtime, region_name="us-east-1"
-#     )
-#     faiss_index = FAISS.load_local("/tmp", embeddings)
-
-#     message_history = DynamoDBChatMessageHistory(
-#         table_name=MEMORY_TABLE, session_id=conversation_id
-#     )
-
-#     memory = ConversationBufferMemory(
-#         memory_key="chat_history",
-#         chat_memory=message_history,
-#         input_key="question",
-#         output_key="answer",
-#         return_messages=True,
-#     )
-
-#     qa = ConversationalRetrievalChain.from_llm(
-#         llm=llm,
-#         retriever=faiss_index.as_retriever(),
-#         memory=memory,
-#         return_source_documents=True,
-#     )
-
-#     res = qa({"question": human_input})
-
-#     logger.info(res)
-
-#     return {
-#         "statusCode": 200,
-#         "headers": {
-#             "Content-Type": "application/json",
-#             "Access-Control-Allow-Headers": "*",
-#             "Access-Control-Allow-Origin": "*",
-#             "Access-Control-Allow-Methods": "*",
-#         },
-#         "body": json.dumps(res["answer"]),
-#     }
