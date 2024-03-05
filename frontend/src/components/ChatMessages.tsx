@@ -71,7 +71,8 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({
               key={i}
             >
               <div className="prose">
-                <p>renderMessageContent{message.data.content||"placeholder summary...repsonse failed"}</p>
+                {/* Render bullet point responses and lists properly */}
+                renderMessageContent{message.data.content||"placeholder summary...repsonse failed"}
               </div>
             </div>
           ))}
