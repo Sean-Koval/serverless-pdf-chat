@@ -153,8 +153,8 @@ Resources:
   CognitoUserPoolClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
-      UserPoolId: us-east-1_V2jCYJIHP # !Ref CognitoUserPool 
-      ClientName: us-east-1_V2jCYJIHP # !Ref CognitoUserPool
+      UserPoolId: !Ref CognitoUserPool 
+      ClientName: !Ref CognitoUserPool
       GenerateSecret: false
 
   Api:
@@ -166,7 +166,7 @@ Resources:
         AddDefaultAuthorizerToCorsPreflight: false
         Authorizers:
           CognitoAuthorizer:
-            UserPoolArn: arn:aws:cognito-idp:us-east-1:257093326925:userpool/us-east-1_V2jCYJIHP # !GetAtt CognitoUserPool.Arn
+            UserPoolArn: !GetAtt CognitoUserPool.Arn
       Cors:
         AllowOrigin: "'*'"
         AllowHeaders: "'*'"
@@ -395,8 +395,8 @@ Resources:
 
 Outputs:
   CognitoUserPool:
-    Value: us-east-1_V2jCYJIHP # !Ref CognitoUserPool
+    Value: !Ref CognitoUserPool
   CognitoUserPoolClient:
-    Value: 7oov99h1juu3k5gc9i91rt1qqu # !Ref CognitoUserPoolClient
+    Value: !Ref CognitoUserPoolClient
   ApiGatewayBaseUrl:
     Value: !Sub "https://${Api}.execute-api.${AWS::Region}.${AWS::URLSuffix}/dev/"
