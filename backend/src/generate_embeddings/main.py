@@ -141,7 +141,7 @@ def lambda_handler(event, context):
     s3.download_file(BUCKET, key, f"/tmp/{file_name_full}")
 
     loader = PyPDFLoader(f"/tmp/{file_name_full}")
-
+    logger.info(f"Loader object: {loader}")
     bedrock_runtime = boto3.client(
         service_name="bedrock-runtime",
         region_name="us-east-1",
@@ -157,7 +157,7 @@ def lambda_handler(event, context):
         vectorstore_cls=FAISS,
         embedding=embeddings,
     )
-
+    logger.info(f"Index creator log: {index_creator}")
     index_from_loader = index_creator.from_loaders([loader])
 
     index_from_loader.vectorstore.save_local("/tmp")
@@ -174,7 +174,7 @@ def lambda_handler(event, context):
     # store data in pdfReader 
     pdfreader = PdfReader(f"/tmp/{file_name_full}") 
     number_of_pages = len(pdfreader.pages)
-    if number_of_pages > 2 and number_of_pages < 8:
+    if number_of_pages > 2:
         llm = Bedrock(
             model_id="anthropic.claude-v2", client=bedrock_runtime, region_name="us-east-1"
         )

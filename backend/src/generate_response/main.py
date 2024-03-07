@@ -18,6 +18,9 @@ from langchain.vectorstores import FAISS
 from langchain.chains import ConversationalRetrievalChain
 from langchain.chains.summarize import load_summarize_chain
 from langchain.text_splitter import CharacterTextSplitter  # If text splitting is required
+from langchain.memory import ConversationBufferWindowMemory
+
+
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate  # For custom prompt templates
 #from langchain.document_loaders import PyPDFLoader
@@ -31,19 +34,6 @@ s3 = boto3.client("s3")
 logger = Logger()
 
 
-# class ExtendedConversationBufferMemory(ConversationBufferMemory):
-#     extra_variables:List[str] = []
-
-#     @property
-#     def memory_variables(self) -> List[str]:
-#         """Will always return list of memory variables."""
-#         return [self.memory_key] + self.extra_variables
-
-#     def load_memory_variables(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
-#         """Return buffer with history and extra variables"""
-#         d = super().load_memory_variables(inputs)
-#         d.update({k:inputs.get(k) for k in self.extra_variables})        
-#         return d
     
 class SymDocumentChatBot:
 
@@ -56,6 +46,55 @@ class SymDocumentChatBot:
         self.user = user
         self.file_name = file_name
         self.conversation_id = conversation_id
+        self._general_chat = False
+
+    def set_general_conversation(self):
+        """Sets General conversational interface for users"""
+        if self.file_name == "general_chat.pdf":
+            self._general_chat = True
+    
+    def general_chat(self, input):
+        """General conversational interface for users"""
+        if self._general_chat:
+            # self.memory = ConversationBufferMemory(
+            #         memory_key="chat_history",
+            #         chat_memory=self.message_history,
+            #         output_key="answer",
+            #         return_messages=True,
+            #     )
+
+            prompt_template = """   
+                    As an AI developed with the Claude v2 model, your capabilities include understanding complex queries, summarizing information, and engaging in detailed conversations. You excel at providing concise answers, generating insights, and maintaining a conversational tone that's approachable and informative. When responding, consider the user's perspective, aim to add value with your responses, and ensure clarity and relevance in your summaries.
+                    
+                    Given this background, here's the current task: {input}
+
+                    Remember:
+                    - Aim for accuracy and helpfulness in your response.
+                    - If the task involves a question, provide a clear and concise answer.
+                    - If it involves summarizing, ensure your summary captures the key points effectively.
+                    - Maintain a conversational tone that's friendly and engaging.
+
+                    """
+        
+            prompt = PromptTemplate(
+            template=prompt_template, input_variables=["input"]
+            )
+            llm_chain = LLMChain(llm=self.llm, 
+                                prompt=prompt)
+
+            # load the entire doc into a prompt and ask summary question
+            # conversation_chain = ConversationChain(
+            #     llm=self.llm,
+            #     prompt=prompt,
+            #     memory=self.memory
+            # )
+            #conversation_response = conversation_chain.predict(input)            
+            conversation_response = llm_chain.predict(input=input)
+            logger.info(f"conversation response: {conversation_response}")
+            self.memory.chat_memory.add_user_message(input)
+            self.memory.chat_memory.add_ai_message(conversation_response)
+
+            return conversation_response
     
     def summarization(self):
 
@@ -211,29 +250,6 @@ class SymDocumentChatBot:
 
         return summary_content
 
-        # try:
-        #     # Download the summary file from S3 to a temporary location
-        #     s3.download_file(BUCKET, summary_file_key, temp_summary_path)
-        #     with open(temp_summary_path, 'r', encoding='utf-8') as file:
-        #         summary_content = file.read()
-        #         #Replace newline and carriage return characters for JSON compatibility
-        #         #summary_content = content.replace('\n', ' ').replace('\r', ' ')
-        #         summary_content = self.summarization()
-
-        #     self.memory.chat_memory.add_user_message(question)
-        #     self.memory.chat_memory.add_ai_message(summary_content)
-
-        #     return summary_content
-
-        # except s3.exceptions.NoSuchKey:
-        #     logger.info(f"Failed to fetch summary from S3: {str(e)}")
-        #     summary_content = self.summarization()
-        #     self.memory.chat_memory.add_user_message(question)
-        #     self.memory.chat_memory.add_ai_message(summary_content)
-
-        #     return summary_content
-            
-
 
     def _load_and_split_pdf(self, pdf_path):
         loader = PyPDFLoader(pdf_path)
@@ -360,7 +376,12 @@ def lambda_handler(event, context):
                                   user=user,
                                   file_name=file_name,
                                   conversation_id=conversation_id,
+                                  message_history=message_history,
     )
+
+    # initialize conversation chain
+    chat_bot.set_general_conversation()
+
     chat_bot_creation_end = time.time()
     logger.info(f"ChatBot Creation Time: {chat_bot_creation_end - chat_bot_creation_start} seconds")
 
@@ -371,18 +392,20 @@ def lambda_handler(event, context):
     logger.info(f"Action Determination Time: {action_determination_end - action_determination_start} seconds")
     
     # Act based on determined action
-    if action == "question_answering":
+    if action == "question_answering" and not chat_bot._general_chat:
         response = chat_bot.question_answering(human_input)
         print("question answering response")
 
-    elif action == "summarization":
+    elif action == "summarization" and not chat_bot._general_chat:
         # You would need to adjust how you get the text to summarize
         response = chat_bot.get_generated_summary(human_input)
 
         print(response)
 
     else:
-        response = "Unable to determine action."
+        response = chat_bot.general_chat(human_input)
+        print(response)
+        #"Unable to determine action."
 
     # Logging and response as before
     logger.info(response)

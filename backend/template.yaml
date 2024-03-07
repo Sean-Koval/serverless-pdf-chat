@@ -153,7 +153,7 @@ Resources:
   CognitoUserPoolClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
-      UserPoolId: !Ref CognitoUserPool
+      UserPoolId: !Ref CognitoUserPool 
       ClientName: !Ref CognitoUserPool
       GenerateSecret: false
 
