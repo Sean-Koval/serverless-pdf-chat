@@ -39,6 +39,12 @@ const DocumentUploader: React.FC = () => {
   };
 
   const uploadFile = async () => {
+
+    if (!selectedFile) {
+      //setInputStatus("No file selected")
+      return;
+    }
+
     setButtonStatus("uploading");
     const contentType = selectedFile.type === "application/pdf" ? "application/pdf" : "text/plain";
 
