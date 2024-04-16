@@ -19,6 +19,8 @@ from langchain.chains import ConversationalRetrievalChain
 from langchain.chains.summarize import load_summarize_chain
 from langchain.text_splitter import CharacterTextSplitter  # If text splitting is required
 from langchain.memory import ConversationBufferWindowMemory
+from langchain_community.chat_models import BedrockChat
+from langchain_core.prompts import ChatPromptTemplate
 
 
 from langchain.chains import LLMChain
@@ -191,7 +193,14 @@ class SymDocumentChatBot:
                 memory=self.memory,
                 return_source_documents=True,
             )
-            res = qa({"question": question})
+
+            messages = [
+                ("system", "You are a helpful cricket expert."),
+                ("human", "{question}"),
+            ]
+            prompt = ChatPromptTemplate.from_messages(messages)
+            #res = qa({"question": question})
+            res = qa.invoke({"question": question})
             return res["answer"]
 
         except Exception as e:
@@ -347,10 +356,14 @@ def lambda_handler(event, context):
         region_name="us-east-1",
     )
 
-    llm = Bedrock(
-        model_id="anthropic.claude-v2", client=bedrock_runtime, region_name="us-east-1"
+    # llm = Bedrock(
+    #     model_id="anthropic.claude-v2", client=bedrock_runtime, region_name="us-east-1"
+    # )
+
+    llm = BedrockChat(
+        model_id="anthropic.claude-3-sonnet-20240229-v1:0", client=bedrock_runtime       
     )
-    faiss_index = FAISS.load_local("/tmp", embeddings)
+    faiss_index = FAISS.load_local("/tmp", embeddings, allow_dangerous_deserialization=True)
 
     message_history = DynamoDBChatMessageHistory(
         table_name=MEMORY_TABLE, session_id=conversation_id

@@ -17,12 +17,15 @@ logger = Logger()
 @logger.inject_lambda_context(log_event=True)
 def lambda_handler(event, context):
     user_id = event["requestContext"]["authorizer"]["claims"]["sub"]
+    logger.info(f"User ID: {user_id}")
     document_id = event["pathParameters"]["documentid"]
+    logger.info(f"Document ID: {document_id}")
     conversation_id = event["pathParameters"]["conversationid"]
 
     response = document_table.get_item(
         Key={"userid": user_id, "documentid": document_id}
     )
+    logger.info(f"Response: {response}")
     document = response["Item"]
     document["conversations"] = sorted(
         document["conversations"], key=lambda conv: conv["created"], reverse=True

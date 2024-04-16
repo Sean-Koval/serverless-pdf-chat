@@ -2,7 +2,7 @@ import os, json
 import boto3
 from aws_lambda_powertools import Logger
 from langchain.embeddings import BedrockEmbeddings
-from langchain.document_loaders import PyPDFLoader
+from langchain.document_loaders import PyPDFLoader, PyMuPDFLoader, TextLoader
 from langchain.indexes import VectorstoreIndexCreator
 from langchain.vectorstores import FAISS
 
@@ -87,10 +87,25 @@ class SymDocumentChatBot:
         except Exception as e:
             return f"Error during summarization: {str(e)}"
         
+    def _load_and_split_pdf(self, file_path):
+        """
+        Load and split the document into chunks based on the file extension.
+        
+        Supported file types:
+        - PDF: Handles both images and text within PDF files.
+        - TXT: Handles plain text files.
+        """
+        _, file_extension = os.path.splitext(file_path)
 
-    def _load_and_split_pdf(self, pdf_path):
-        loader = PyPDFLoader(pdf_path)
+        if file_extension.lower() == '.pdf':
+            loader = PyMuPDFLoader(file_path)
+        elif file_extension.lower() == '.txt':
+            loader = TextLoader(file_path)
+        else:
+            raise ValueError("Unsupported file type. Please provide a PDF or TXT file.")
+        
         return loader.load_and_split()
+
 
     def _perform_map_reduce_summarization(self, pages):
         map_prompt_template = """
@@ -174,7 +189,7 @@ def lambda_handler(event, context):
     # store data in pdfReader 
     pdfreader = PdfReader(f"/tmp/{file_name_full}") 
     number_of_pages = len(pdfreader.pages)
-    if number_of_pages > 2:
+    if number_of_pages < 2:
         llm = Bedrock(
             model_id="anthropic.claude-v2", client=bedrock_runtime, region_name="us-east-1"
         )

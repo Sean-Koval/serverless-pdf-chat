@@ -16,9 +16,11 @@ const DocumentUploader: React.FC = () => {
 
   useEffect(() => {
     if (selectedFile) {
-      if (selectedFile.type === "application/pdf") {
+      if (selectedFile.type === "application/pdf" || selectedFile.type === "text/plain") {
         setInputStatus("valid");
       } else {
+        // temp setInputStatus to handle errors back to user
+        setInputStatus("invalid");
         setSelectedFile(null);
       }
     }
@@ -26,11 +28,20 @@ const DocumentUploader: React.FC = () => {
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    setSelectedFile(file || null);
+    if (file) {
+      if (file.type === "application/pdf" || file.type === "text/plain") {
+        setSelectedFile(file);
+      } else {
+        setInputStatus("invalid file type - please upload .pdf or .txt");
+        setSelectedFile(null);
+      }
+    }
   };
 
   const uploadFile = async () => {
     setButtonStatus("uploading");
+    const contentType = selectedFile.type === "application/pdf" ? "application/pdf" : "text/plain";
+
     await API.get("serverless-pdf-chat", "/generate_presigned_url", {
       headers: { "Content-Type": "application/json" },
       queryStringParameters: {
@@ -40,7 +51,7 @@ const DocumentUploader: React.FC = () => {
       fetch(presigned_url.presignedurl, {
         method: "PUT",
         body: selectedFile,
-        headers: { "Content-Type": "application/pdf" },
+        headers: { "Content-Type": contentType },
       }).then(() => {
         setButtonStatus("success");
       });
@@ -69,7 +80,7 @@ const DocumentUploader: React.FC = () => {
                 <span className="font-semibold">Click to upload</span> your
                 document
               </p>
-              <p className="text-xs text-gray-500">Only .pdf accepted</p>
+              <p className="text-xs text-gray-500">Only .pdf or .txt accepted</p>
             </div>
 
             <input

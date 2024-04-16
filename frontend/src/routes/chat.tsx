@@ -79,7 +79,7 @@ const Document: React.FC = () => {
           example: false,
         },
       };
-
+      console.log("Preview message:", previewMessage)
       const updatedConversation = {
         ...conversation,
         messages: [...conversation.messages, previewMessage],

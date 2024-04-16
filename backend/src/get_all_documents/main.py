@@ -18,6 +18,12 @@ def lambda_handler(event, context):
 
     response = document_table.query(KeyConditionExpression=Key("userid").eq(user_id))
     items = sorted(response["Items"], key=lambda item: item["created"], reverse=True)
+    # Query for shared documents
+    # response_shared = document_table.query(KeyConditionExpression=Key("userid").eq("shared_docs_serverless_pdf")) # shared_docs_serverless_pdf
+    # items_shared = response_shared["Items"]
+    # items = items + items_shared
+    # items_sorted = sorted(items, key=lambda item: item["created"], reverse=True)
+
     for item in items:
         item["conversations"] = sorted(
             item["conversations"], key=lambda conv: conv["created"], reverse=True

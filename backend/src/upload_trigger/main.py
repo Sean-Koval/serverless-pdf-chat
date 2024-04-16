@@ -31,37 +31,64 @@ def lambda_handler(event, context):
 
     s3.download_file(BUCKET, key, f"/tmp/{file_name}")
 
-    with open(f"/tmp/{file_name}", "rb") as f:
-        reader = PyPDF2.PdfReader(f)
-        pages = str(len(reader.pages))
+    # with open(f"/tmp/{file_name}", "rb") as f:
+    #     reader = PyPDF2.PdfReader(f)
+    #     pages = str(len(reader.pages))
+    _, file_extension = os.path.splitext(file_name)
 
-    conversation_id = shortuuid.uuid()
+    try:
+        if file_extension.lower() == '.pdf':
+            with open(f"/tmp/{file_name}", "rb") as file:
+                reader = PyPDF2.PdfReader(file)
+                pages = str(len(reader.pages))
+                #page_count = str(pages)
+        elif file_extension.lower() == '.txt':
+            with open(f"/tmp/{file_name}", "r") as file:
+                content = file.readlines()
+                pages = str(len(content))
+                #page_count = str(pages)
+        else:
+            raise ValueError("Unsupported file type")
 
-    timestamp = datetime.utcnow()
-    timestamp_str = timestamp.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        conversation_id = shortuuid.uuid()
 
-    document = {
-        "userid": user_id,
-        "documentid": document_id,
-        "filename": file_name,
-        "created": timestamp_str,
-        "pages": pages,
-        "filesize": str(event["Records"][0]["s3"]["object"]["size"]),
-        "docstatus": "UPLOADED",
-        "conversations": [],
-    }
+        timestamp = datetime.utcnow()
+        timestamp_str = timestamp.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
-    conversation = {"conversationid": conversation_id, "created": timestamp_str}
-    document["conversations"].append(conversation)
+        document = {
+            "userid": user_id,
+            "documentid": document_id,
+            "filename": file_name,
+            "created": timestamp_str,
+            "pages": pages,
+            "filesize": str(event["Records"][0]["s3"]["object"]["size"]),
+            "docstatus": "UPLOADED",
+            "conversations": [],
+        }
 
-    document_table.put_item(Item=document)
+        conversation = {"conversationid": conversation_id, "created": timestamp_str}
+        document["conversations"].append(conversation)
 
-    conversation = {"SessionId": conversation_id, "History": []}
-    memory_table.put_item(Item=conversation)
+        document_table.put_item(Item=document)
 
-    message = {
-        "documentid": document_id,
-        "key": key,
-        "user": user_id,
-    }
-    sqs.send_message(QueueUrl=QUEUE, MessageBody=json.dumps(message))
+        conversation = {"SessionId": conversation_id, "History": []}
+        memory_table.put_item(Item=conversation)
+
+        message = {
+            "documentid": document_id,
+            "key": key,
+            "user": user_id,
+        }
+        sqs.send_message(QueueUrl=QUEUE, MessageBody=json.dumps(message))
+        return {
+            'statusCode': 200,
+            'body': f"Document processed successfully with {pages} pages."
+        }
+
+    except Exception as e:
+        logger.error(f"Error uploading document: {str(e)}")
+        return {
+            'statusCode': 500,
+            'body': f"Error uploading file: {str(e)}"
+        }
+

@@ -33,29 +33,38 @@ def lambda_handler(event, context):
     file_name_full = event["queryStringParameters"]["file_name"]
     file_name = file_name_full.split(".pdf")[0]
 
-    exists = s3_key_exists(BUCKET, f"{user_id}/{file_name_full}/{file_name_full}")
+    #exists = s3_key_exists(BUCKET, f"{user_id}/{file_name_full}/{file_name_full}")
+    file_extension = os.path.splittext(file_name_full)[1].lower()
+    file_name = os.path.splittext(file_name_full)[0]
 
+    # check if the file already exists in the s3 bucket
+    exists = s3_key_exists(BUCKET, f"{user_id}/{file_name}")
     logger.info(
         {
             "user_id": user_id,
             "file_name_full": file_name_full,
             "file_name": file_name,
             "exists": exists,
+            "file_extension": file_extension
         }
     )
 
+    # set the content type based on the file extension
+    content_type = "application/pdf" if file_extension == ".pdf" else "text/plain"
+
+
     if exists:
         suffix = shortuuid.ShortUUID().random(length=4)
-        key = f"{user_id}/{file_name}-{suffix}.pdf/{file_name}-{suffix}.pdf"
+        key = f"{user_id}/{file_name}-{suffix}{file_extension}/{file_name}-{suffix}{file_extension}"
     else:
-        key = f"{user_id}/{file_name}.pdf/{file_name}.pdf"
+        key = f"{user_id}/{file_name}{file_extension}/{file_name}{file_extension}"
 
     presigned_url = s3.generate_presigned_url(
         ClientMethod="put_object",
         Params={
             "Bucket": BUCKET,
             "Key": key,
-            "ContentType": "application/pdf",
+            "ContentType": content_type,
         },
         ExpiresIn=300,
         HttpMethod="PUT",
