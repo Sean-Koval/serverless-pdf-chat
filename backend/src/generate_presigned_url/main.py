@@ -31,11 +31,10 @@ def s3_key_exists(bucket, key):
 def lambda_handler(event, context):
     user_id = event["requestContext"]["authorizer"]["claims"]["sub"]
     file_name_full = event["queryStringParameters"]["file_name"]
-    file_name = file_name_full.split(".pdf")[0]
 
     #exists = s3_key_exists(BUCKET, f"{user_id}/{file_name_full}/{file_name_full}")
-    file_extension = os.path.splittext(file_name_full)[1].lower()
-    file_name = os.path.splittext(file_name_full)[0]
+    file_extension = os.path.splitext(file_name_full)[1].lower()
+    file_name = os.path.splitext(file_name_full)[0]
 
     # check if the file already exists in the s3 bucket
     exists = s3_key_exists(BUCKET, f"{user_id}/{file_name}")

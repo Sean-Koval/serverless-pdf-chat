@@ -16,7 +16,7 @@ const DocumentUploader: React.FC = () => {
 
   useEffect(() => {
     if (selectedFile) {
-      if (selectedFile.type === "application/pdf" || selectedFile.type === "text/plain") {
+      if (selectedFile.type === "application/pdf" || selectedFile.type === "text/plain" || selectedFile.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
         setInputStatus("valid");
       } else {
         // temp setInputStatus to handle errors back to user
@@ -29,10 +29,10 @@ const DocumentUploader: React.FC = () => {
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.type === "application/pdf" || file.type === "text/plain") {
+      if (file.type === "application/pdf" || file.type === "text/plain" || file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
         setSelectedFile(file);
       } else {
-        setInputStatus("invalid file type - please upload .pdf or .txt");
+        setInputStatus("invalid file type - please upload .pdf, .txt, or .docx");
         setSelectedFile(null);
       }
     }
@@ -46,7 +46,16 @@ const DocumentUploader: React.FC = () => {
     }
 
     setButtonStatus("uploading");
-    const contentType = selectedFile.type === "application/pdf" ? "application/pdf" : "text/plain";
+    //const contentType = selectedFile.type === "application/pdf" ? "application/pdf" : "text/plain";
+    let contentType;
+    if (selectedFile.type === "application/pdf") {
+      contentType = "application/pdf";
+    } else if (selectedFile.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+      contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    } else {
+      contentType = "text/plain"; // Default to text/plain for any other types, primarily text files
+    }
+
 
     await API.get("serverless-pdf-chat", "/generate_presigned_url", {
       headers: { "Content-Type": "application/json" },

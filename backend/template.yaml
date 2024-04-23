@@ -213,7 +213,7 @@ Resources:
           QUEUE: !GetAtt EmbeddingQueue.QueueName
           BUCKET: !Sub "${AWS::StackName}-${AWS::Region}-${AWS::AccountId}"
       Events:
-        S3Event:
+        PdfUploadEvent:
           Type: S3
           Properties:
             Bucket: !Ref DocumentBucket
@@ -224,6 +224,27 @@ Resources:
                 Rules:
                   - Name: suffix
                     Value: .pdf
+        TxtUploadEvent:
+          Type: S3
+          Properties:
+            Bucket: !Ref DocumentBucket
+            Events: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: suffix
+                    Value: .txt
+        DocxUploadEvent:
+          Type: S3
+          Properties:
+            Bucket: !Ref DocumentBucket
+            Events: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: suffix
+                    Value: .docx
+
 
   GetDocumentFunction:
     Type: AWS::Serverless::Function

@@ -4,6 +4,8 @@ import boto3
 import PyPDF2
 import shortuuid
 import urllib
+from docx import Document
+
 from aws_lambda_powertools import Logger
 
 DOCUMENT_TABLE = os.environ["DOCUMENT_TABLE"]
@@ -23,6 +25,13 @@ logger = Logger()
 @logger.inject_lambda_context(log_event=True)
 def lambda_handler(event, context):
     key = urllib.parse.unquote_plus(event["Records"][0]["s3"]["object"]["key"])
+    if key.startswith("summaries/"):
+        logger.info(f"skipping processing for summary text file: {key}")
+        return {
+            "statusCode": 200,
+            "body": json.dumps(f"Skpped file in summaries dir: {key}")
+        }
+        
     split = key.split("/")
     user_id = split[0]
     file_name = split[1]
@@ -47,6 +56,11 @@ def lambda_handler(event, context):
                 content = file.readlines()
                 pages = str(len(content))
                 #page_count = str(pages)
+        elif file_extension.lower() == '.docx':
+            doc = Document(f"/tmp/{file_name}")
+            num_paragraphs = len(doc.paragraphs)
+            pages = str(num_paragraphs) # calculating number of paragraphs not pages
+
         else:
             raise ValueError("Unsupported file type")
 

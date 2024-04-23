@@ -26,7 +26,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate  # For custom prompt templates
 #from langchain.document_loaders import PyPDFLoader
-from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader
 
 MEMORY_TABLE = os.environ["MEMORY_TABLE"]
 BUCKET = os.environ["BUCKET"]
@@ -98,42 +98,42 @@ class SymDocumentChatBot:
 
             return conversation_response
     
-    def summarization(self):
+    # def summarization(self):
 
-        """
-        Summarize a document using a map-reduce approach with LLM.
-        """
-        start_time = time.time()  # Start timing
+    #     """
+    #     Summarize a document using a map-reduce approach with LLM.
+    #     """
+    #     start_time = time.time()  # Start timing
 
-        if not self.llm:
-            return "LLM not initialized."
+    #     if not self.llm:
+    #         return "LLM not initialized."
 
-        try:
-            # Assuming s3, PyPDFLoader, and necessary prompts are defined outside this snippet.
-            document_path = f"/tmp/{self.file_name}"
-            s3_start = time.time()  # Start timing S3 download
-            s3.download_file(BUCKET, f"{self.user}/{self.file_name}/{self.file_name}", document_path)
-            s3_end = time.time()  # End timing S3 download
-            logger.info(f"S3 Download Time: {s3_end - s3_start} seconds")
+    #     try:
+    #         # Assuming s3, PyPDFLoader, and necessary prompts are defined outside this snippet.
+    #         document_path = f"/tmp/{self.file_name}"
+    #         s3_start = time.time()  # Start timing S3 download
+    #         s3.download_file(BUCKET, f"{self.user}/{self.file_name}/{self.file_name}", document_path)
+    #         s3_end = time.time()  # End timing S3 download
+    #         logger.info(f"S3 Download Time: {s3_end - s3_start} seconds")
             
-            load_start = time.time()  # Start timing PDF load and split
-            pages = self._load_and_split_pdf(document_path)
-            load_end = time.time()  # End timing PDF load and split
-            logger.info(f"Load and Split PDF Time: {load_end - load_start} seconds")
+    #         load_start = time.time()  # Start timing PDF load and split
+    #         pages = self._load_and_split_pdf(document_path)
+    #         load_end = time.time()  # End timing PDF load and split
+    #         logger.info(f"Load and Split PDF Time: {load_end - load_start} seconds")
             
-            map_reduce_start = time.time()
-            # map reduce and return final step in intermediate steps (output)
-            map_reduce_output = self._perform_map_reduce_summarization(pages)
-            map_reduce_end = time.time()
-            logger.info(f"Map Reduce Summarization Time: {map_reduce_end - map_reduce_start} seconds")
+    #         map_reduce_start = time.time()
+    #         # map reduce and return final step in intermediate steps (output)
+    #         map_reduce_output = self._perform_map_reduce_summarization(pages)
+    #         map_reduce_end = time.time()
+    #         logger.info(f"Map Reduce Summarization Time: {map_reduce_end - map_reduce_start} seconds")
 
-            final_summary = map_reduce_output["intermediate_steps"][-1]  # Assuming final summary is in the last step
-            end_time = time.time()
-            logger.info(f"Total Summarization Time: {end_time - start_time} seconds")
+    #         final_summary = map_reduce_output["intermediate_steps"][-1]  # Assuming final summary is in the last step
+    #         end_time = time.time()
+    #         logger.info(f"Total Summarization Time: {end_time - start_time} seconds")
 
-            return final_summary
-        except Exception as e:
-            return f"Error during summarization: {str(e)}"
+    #         return final_summary
+    #     except Exception as e:
+    #         return f"Error during summarization: {str(e)}"
     # TEMP SOLUTION
     def summarize_stuff(self, input):
         """
@@ -147,9 +147,27 @@ class SymDocumentChatBot:
             s3.download_file(BUCKET, f"{self.user}/{self.file_name}/{self.file_name}", document_path)
             s3_end = time.time()  # End timing S3 download
             logger.info(f"S3 Download Time: {s3_end - s3_start} seconds")
+            logger.info(f"DOWNLOADED FILE FOR SUMMARIZATION: {document_path}")
 
-            pages = self._load_and_split_pdf(document_path)
-            large_doc_str = self.format_docs(pages)
+            # check the file type
+            extension = os.path.splitext(document_path)[1].lower()
+            match extension:
+                case ".txt":
+                    # process txt summary
+                    large_doc_str = self._read_text_file(document_path)
+                    logger.info(f"large doc string: {large_doc_str}")
+                case ".pdf":
+                    # process pdf summary
+                    pages = self._load_and_split_pdf(document_path)
+                    large_doc_str = self.format_docs(pages)
+                    logger.info(f"large doc string: {large_doc_str}")
+                case ".docx":
+                    # process docx file
+                    pages = self._read_docx_file(document_path)
+                    large_doc_str = self.format_docs(pages)
+                    logger.info(f"large doc string: {large_doc_str}")
+
+
 
             prompt_template = """Here is the task: {input}
                                 
@@ -168,15 +186,40 @@ class SymDocumentChatBot:
             summary_content = llm_chain.predict(input=input, context=large_doc_str)
             #self.memory.chat_memory.add_user_message(input)
             #self.memory.chat_memory.add_ai_message(summary_content)
-
+            if len(summary_content) < 1:
+                summary_content = "Could not produce a summary"
             return summary_content
 
         except Exception as e:
             logger.error(f"There was an error with 'stuff' summarization: {e}")
+            return "Error Summarizing"
     
     def format_docs(self, docs: List[Document]) -> str:
         """Format the docs."""
         return ", ".join([doc.page_content for doc in docs])
+    
+    def _read_text_file(self, file_path):
+        """
+        Reads the contents of a text file and returns it as a single string.
+        
+        :param file_path: The path to the text file.
+        :return: A string containing all the contents of the file.
+        """
+        try:
+            with open(file_path, 'r', encoding='utf-8') as file:
+                content = file.read()
+            return content
+        except FileNotFoundError:
+            return "The specified file was not found."
+        except Exception as e:
+            return f"An error occurred while reading the file: {str(e)}"
+    
+    def _read_docx_file(self, file_path):
+        """
+        Load and process docx file.
+        """
+        loader = Docx2txtLoader(file_path)
+        return loader.load_and_split()
     
     def question_answering(self, question):
         """
@@ -229,8 +272,8 @@ class SymDocumentChatBot:
         #s3 = boto3.client('s3')
 
         # Construct the S3 key for the summary file
-        summary_file_key = f"{self.user}/{self.file_name}/summary.txt"
-
+        summary_file_key = f"{self.user}/{self.file_name}/summaries/summary.txt"
+        print(f"summary file key: {summary_file_key}")
         # Temporary path to save the downloaded summary file
         temp_summary_path = "/tmp/summary.txt"
 
