@@ -2,7 +2,7 @@ import os, json
 import boto3
 from aws_lambda_powertools import Logger
 from langchain.embeddings import BedrockEmbeddings
-from langchain.document_loaders import PyMuPDFLoader, TextLoader, Doc
+from langchain.document_loaders import PyMuPDFLoader, TextLoader
 from langchain.indexes import VectorstoreIndexCreator
 from langchain.vectorstores import FAISS
 

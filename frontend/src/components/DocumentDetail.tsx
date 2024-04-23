@@ -56,7 +56,7 @@ const DocumentDetail: React.FC<Document> = (document: Document) => {
 
         {document.docstatus === "FAILED" && (
           <div className="flex flex-row justify-center pt-4">
-            <span className="inline-flex items-center self-start bg-green-100 text-red-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded">
+            <span className="inline-flex items-center self-start bg-red-100 text-red-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded">
               <CheckCircleIcon className="w-4 h-4 mr-1" />
               Failed to process
             </span>

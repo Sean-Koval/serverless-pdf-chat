@@ -35,6 +35,7 @@ def lambda_handler(event, context):
     #exists = s3_key_exists(BUCKET, f"{user_id}/{file_name_full}/{file_name_full}")
     file_extension = os.path.splitext(file_name_full)[1].lower()
     file_name = os.path.splitext(file_name_full)[0]
+    logger.info(f"file extension: {file_extension}")
 
     # check if the file already exists in the s3 bucket
     exists = s3_key_exists(BUCKET, f"{user_id}/{file_name}")
@@ -47,9 +48,21 @@ def lambda_handler(event, context):
             "file_extension": file_extension
         }
     )
+    
 
     # set the content type based on the file extension
-    content_type = "application/pdf" if file_extension == ".pdf" else "text/plain"
+    #content_type = "application/pdf" if file_extension == ".pdf" else "text/plain"
+
+    match file_extension:
+        case ".pdf":
+            content_type = "application/pdf"
+        case ".txt":
+            content_type = "text/plain"
+        case ".docx":
+            content_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        case _:
+            content_type = "application/octet-stream"  # Default or fallback type if none of the above
+
 
 
     if exists:
