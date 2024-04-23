@@ -47,7 +47,8 @@ const DocumentUploader: React.FC = () => {
 
     setButtonStatus("uploading");
     //const contentType = selectedFile.type === "application/pdf" ? "application/pdf" : "text/plain";
-    let contentType;
+    let contentType: string;  // Explicitly typing the variable
+
     if (selectedFile.type === "application/pdf") {
       contentType = "application/pdf";
     } else if (selectedFile.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
